@@ -1,0 +1,6 @@
+---
+- name: Put udev rules
+  template:
+    dest=/etc/udev/rules.d/79-net.rules
+    src=udev-net.rules.j2
+  when: network_names is defined

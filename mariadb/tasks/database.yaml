@@ -1,0 +1,7 @@
+---
+- name: Create mariadb database {{db}}
+  mysql_db: name={{db}} state=present
+
+- name: Create mariadb user {{db}}
+  mysql_user: name={{db}} password={{password}}
+              state=present priv={{db}}.*:ALL

@@ -1,0 +1,60 @@
+---
+- name: Put domain into domainlist
+  lineinfile: dest=/opt/letsencrypt.sh/domains.txt
+              create=yes
+              line={{ domain }}
+  register: domain_in_file
+
+- name: Make sure cert dir exists
+  file: path="/opt/letsencrypt.sh/certs/{{domain}}"
+        state=directory
+
+- name: Check if cert already exists
+  stat: path="/opt/letsencrypt.sh/certs/{{ domain }}/cert.pem"
+  register: certificate
+
+- name: Symlink dummy certificate info
+  file: state=link
+        path="/opt/letsencrypt.sh/certs/{{ domain }}/cert.pem"
+        src="/etc/ssl/certs/ssl-cert-snakeoil.pem"
+  when: not certificate.stat.exists
+
+- name: Symlink dummy certificate info
+  file: state=link
+        path="/opt/letsencrypt.sh/certs/{{ domain }}/chain.pem"
+        src="/etc/ssl/certs/ssl-cert-snakeoil.pem"
+  when: not certificate.stat.exists
+
+- name: Symlink dummy certificate info
+  file: state=link
+        path="/opt/letsencrypt.sh/certs/{{ domain }}/privkey.pem"
+        src="/etc/ssl/private/ssl-cert-snakeoil.key"
+  when: not certificate.stat.exists
+
+# Make sure apache is reloaded so domain is active
+- meta: flush_handlers
+  when: domain_in_file.changed
+
+- name: Check if cert is snakeoil cert
+  stat: path="/opt/letsencrypt.sh/certs/{{domain}}/cert.pem"
+  register: cert
+
+- name: Delete cert if is snakeoil cert
+  file: path="/opt/letsencrypt.sh/certs/{{domain}}/cert.pem"
+        state=absent
+  when: cert.stat.islnk and cert.stat.lnk_source == "/etc/ssl/certs/ssl-cert-snakeoil.pem"
+
+- name: Delete chain if is snakeoil cert
+  file: path="/opt/letsencrypt.sh/certs/{{domain}}/chain.pem"
+        state=absent
+  when: cert.stat.islnk and cert.stat.lnk_source == "/etc/ssl/certs/ssl-cert-snakeoil.pem"
+
+- name: Delete key if is snakeoil cert
+  file: path="/opt/letsencrypt.sh/certs/{{domain}}/privkey.pem"
+        state=absent
+  when: cert.stat.islnk and cert.stat.lnk_source == "/etc/ssl/certs/ssl-cert-snakeoil.pem"
+
+- name: run letsencrypt.sh
+  command: /opt/letsencrypt.sh/letsencrypt.sh -c
+  when: domain_in_file.changed
+  notify: Reload apache

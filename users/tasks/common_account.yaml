@@ -1,0 +1,11 @@
+---
+- name: Setup common account
+  user:
+    name="{{common_account}}"
+    shell=/bin/bash
+
+- name: Setup ssh keys for common account
+  authorized_key:
+    user="{{common_account}}"
+    exclusive=yes
+    key="{% for name,info in users|dictsort %}{{ info['ssh-keys'] + '\n' }}{% endfor %}"

@@ -1,0 +1,50 @@
+---
+# General setup for my hosts
+- name: Install common packages
+  apt: name={{ item }} state=present update_cache=yes
+  with_items:
+    - iputils-arping
+    - git
+    - htop
+    - iotop
+    - lldpd
+    - mtr
+    - ntp
+    - screen
+    - socat
+    - strace
+    - tcpdump
+    - tshark
+    - vim
+    - zsh
+
+- name: Install packackes for physical machines
+  apt: name={{ item }} state=present update_cache=yes
+  with_items:
+    - ipmitool
+    - lm-sensors
+    - smartmontools
+  when: ansible_virtualization_role != 'guest'
+
+- name: remove not needed packages
+  apt: name={{ item }} state=absent
+  with_items:
+    - rpcbind
+    - openntpd
+
+- name: Require Key for Login
+  lineinfile: dest=/etc/ssh/sshd_config
+              regexp=PasswordAuthentication
+              line="PasswordAuthentication no"
+  notify: restart ssh
+
+- name: Configure persistent journal
+  lineinfile: dest=/etc/systemd/journald.conf
+              regexp=Storage=
+              line="Storage=persistent"
+  notify: restart journald
+
+- include: molly-guard.yml
+- include: network-names.yml
+- include: hostname.yml
+- include: resolv.yml

@@ -1,0 +1,26 @@
+---
+- name: Make letsencrypt.sh dir
+  file: path=/opt/letsencrypt.sh
+        state=directory
+
+- name: Put letsencrypt.sh script
+  copy: src=letsencrypt.sh
+        dest=/opt/letsencrypt.sh/letsencrypt.sh
+        mode=0755
+
+- name: Make sure curl is installed
+  apt: name=curl state=present update_cache=yes
+
+- name: Make sure acme-challenge dir exists
+  file: path=/var/www/letsencrypt
+        state=directory
+
+- name: Make sure certs dir exists
+  file: path=/opt/letsencrypt.sh/certs
+        state=directory
+
+- name: Make sure letsencrypt.sh gets run by cron
+  cron: name="run letsencrypt cronjob"
+        minute=42
+        hour=23
+        job="/opt/letsencrypt.sh/letsencrypt.sh -c"

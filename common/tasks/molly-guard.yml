@@ -1,0 +1,8 @@
+---
+- name: Install molly-guard
+  apt: name=molly-guard state=present update_cache=yes
+
+- name: configure molly-guard
+  copy: dest=/etc/molly-guard/rc
+        src=molly-guard/rc
+        owner=root group=root mode=0644

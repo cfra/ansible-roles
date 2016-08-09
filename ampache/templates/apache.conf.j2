@@ -1,0 +1,44 @@
+#
+# Ansible managed
+#
+
+<VirtualHost *:80>
+	RewriteEngine On
+	RewriteCond %{REQUEST_URI} !^/.well-known
+	RewriteRule ^(.*)$ https://{{ inventory_hostname }}$1 [redirect=301]
+	Alias "/.well-known/acme-challenge/" "/var/www/letsencrypt/"
+	<Directory "/var/www/letsencrypt">
+	    AllowOverride None
+	    Options None
+	    Require all granted
+	</Directory>
+</VirtualHost>
+
+<VirtualHost *:443>
+	ErrorLog ${APACHE_LOG_DIR}/error.log
+	LogLevel notice
+	CustomLog ${APACHE_LOG_DIR}/access.log combined
+
+	Header set Strict-Transport-Security "max-age=31536000; includeSubDomains"
+
+	SSLEngine On
+	SSLHonorCipherOrder on
+	SSLProtocol +TLSv1.2 +TLSv1.1 +TLSv1 -SSLv3
+	SSLCipherSuite ECDHE-RSA-AES128-GCM-SHA256:ECDHE-RSA-AES256-GCM-SHA384:DHE-RSA-AES128-GCM-SHA256:kEDH+AESGCM:ECDHE-RSA-AES128-SHA256:ECDHE-RSA-AES128-SHA:ECDHE-RSA-AES256-SHA384:ECDHE-RSA-AES256-SHA:DHE-RSA-AES128-SHA256:DHE-RSA-AES128-SHA:DHE-RSA-AES256-SHA256:DHE-RSA-AES256-SHA:!aNULL:!eNULL:!EXPORT:!DES:!RC4:!3DES:!MD5:!PSK
+	SSLCompression off
+
+	SSLUseStapling on
+	SSLStaplingResponderTimeout 5
+	SSLStaplingReturnResponderErrors off
+
+	SSLCertificateFile /opt/letsencrypt.sh/certs/{{ inventory_hostname }}/cert.pem
+	SSLCertificateChainFile /opt/letsencrypt.sh/certs/{{ inventory_hostname }}/chain.pem
+	SSLCertificateKeyFile /opt/letsencrypt.sh/certs/{{ inventory_hostname }}/privkey.pem
+
+	Alias / /usr/share/ampache/www/
+	
+	<Directory /usr/share/ampache/www>
+	        Options FollowSymLinks
+	        AllowOverride All
+	</Directory>
+</VirtualHost>

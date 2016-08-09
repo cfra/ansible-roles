@@ -1,0 +1,34 @@
+---
+# Setup apache
+- name: Install apache
+  apt: name={{ item }} state=present update_cache=yes
+  with_items:
+    - apache2
+    - apache2-mpm-event
+
+- name: Enable Apache Modules
+  apache2_module: name={{ item }} state=present
+  with_items:
+    - authnz_ldap
+    - authz_groupfile
+    - cgid
+    - headers
+    - info
+    - proxy
+    - proxy_http
+    - reqtimeout
+    - rewrite
+    - ssl
+  notify: Restart apache
+
+- name: Disable standard vhost
+  file:
+    name=/etc/apache2/sites-enabled/000-default.conf
+    state=absent
+  notify: Reload apache
+
+- name: Configure OCSP Stapling cache
+  lineinfile:
+    dest=/etc/apache2/mods-enabled/ssl.conf
+    line="SSLStaplingCache shmcb:${APACHE_RUN_DIR}/ocsp_scache(128000)"
+  notify: Reload apache

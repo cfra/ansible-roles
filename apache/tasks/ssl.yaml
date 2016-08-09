@@ -1,0 +1,21 @@
+---
+- name: Create ssl DIR
+  file:
+    path=/etc/apache2/sites/{{ ssl_server_name }}/ssl
+    state=directory
+
+- name: Place SSL cert and chain
+  copy:
+    src=ssl/{{inventory_hostname}}/{{ ssl_server_name }}/{{item}}
+    dest=/etc/apache2/sites/{{ ssl_server_name }}/ssl/{{item}}
+  with_items:
+  - cert.pem
+  - chain.pem
+  notify: Reload apache
+
+- name: Place SSL key
+  copy:
+    content="{{ssl_keys[inventory_hostname][ssl_server_name]}}"
+    dest="/etc/apache2/sites/{{ssl_server_name}}/ssl/key.pem"
+    mode=0600
+  notify: Reload apache

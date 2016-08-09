@@ -1,0 +1,17 @@
+---
+- name: Add CumulusLinux-2.5 Distribution Signature Key
+  apt_key: keyserver=pgp.mit.edu id=100BD2B1490BD3C9625CB63AFF5F9260CC1FE3E2
+
+- name: Add Cumulus Linux 2.5 Repo
+  apt_repository: repo="deb http://repo.cumulusnetworks.com/ CumulusLinux-2.5 main"
+
+- name: Uninstall ifupdown
+  apt: name=ifupdown state=absent
+
+- name: Install ifupdown2
+  apt: name="{{item}}" state=present update_cache=yes
+  with_items:
+    - python-ifupdown2
+    - python-argcomplete
+    - python-mako
+    - python-ipaddr

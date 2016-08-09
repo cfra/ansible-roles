@@ -1,0 +1,6 @@
+---
+- name: Put resolv.conf
+  template: dest=/etc/resolv.conf
+            src=resolv.conf.j2
+            mode=0444
+  when: resolvers is defined

@@ -1,0 +1,9 @@
+ACTION!="add", GOTO="net_custom_end"
+SUBSYSTEM!="net", GOTO="net_custom_end"
+ENV{ID_BUS}!="pci", GOTO="net_custom_end"
+
+{% for netif,mac in network_names|dictsort %}
+ATTR{address}=="{{mac}}", NAME="{{netif}}"
+{% endfor %}
+
+LABEL="net_custom_end"

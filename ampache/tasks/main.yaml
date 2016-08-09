@@ -1,0 +1,17 @@
+---
+- name: Install ampache
+  apt: name=ampache state=present update_cache=yes
+
+- name: Put apache config
+  template: src=apache.conf.j2
+            dest=/etc/apache2/conf-enabled/ampache.conf
+  notify: Reload apache
+
+- include: ../../letsencrypt/tasks/domain.yaml
+  vars:
+    domain: "{{ inventory_hostname }}"
+
+- include: ../../mariadb/tasks/database.yaml
+  vars:
+    db: ampache
+    password: "{{ ampache_db_password }}"

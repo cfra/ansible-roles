@@ -1,0 +1,8 @@
+---
+- name: Set Hostname
+  hostname: name="{{inventory_hostname.split('.')[0]}}"
+
+- name: Put /etc/hosts
+  template:
+    src=hosts.j2
+    dest=/etc/hosts

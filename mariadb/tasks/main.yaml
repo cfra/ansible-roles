@@ -1,0 +1,13 @@
+---
+- name: Install MariaDB
+  apt: name={{item}} state=present update_cache=yes
+  with_items:
+  - mariadb-server
+  - python-mysqldb
+
+- name: Set Root Password
+  mysql_user: name=root password="{{mariadb_password}}"
+
+- name: Put Root Client Config
+  template: src=my.cnf.j2
+            dest=/root/.my.cnf

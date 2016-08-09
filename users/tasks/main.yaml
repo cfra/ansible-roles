@@ -1,0 +1,28 @@
+---
+- name: Install sudo
+  apt: name=sudo state=present update_cache=yes
+
+- name: Ensure groups are present
+  group: name="{{item}}"
+  with_items:
+    - sudo
+    - dialout
+    - libvirt
+
+- name: Setup user Accounts
+  user:
+    name="{{item.key}}"
+    password="{{item.value.password}}"
+    shell="{{item.value.shell|default("/bin/bash")}}"
+    groups=sudo,dialout,libvirt
+  with_dict: "{{users}}"
+
+- name: Setup user SSH-Keys
+  authorized_key:
+    user="{{item.key}}"
+    exclusive=yes
+    key="{{item.value['ssh-keys']}}"
+  with_dict: "{{users}}"
+
+- include: common_account.yaml
+  when: common_account is defined
