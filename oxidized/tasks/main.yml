@@ -1,0 +1,71 @@
+---
+
+- name: Install dependencies
+  apt: name={{item}} state=present update_cache=yes
+  with_items:
+  - ruby
+  - ruby-dev
+  - libsqlite3-dev
+  - libssl-dev
+  - pkg-config
+  - cmake
+  - libssh2-1-dev
+
+- name: Install oxidized
+  gem: name={{item}} state=present user_install=no
+  with_items:
+  - oxidized
+  - oxidized-script
+  - oxidized-web
+
+- name: Create oxidized group
+  group: name=oxidized
+
+- name: Create oxidized user
+  user: name=oxidized group=oxidized home=/var/lib/oxidized
+
+- name: Create oxidized git dir
+  file: path=/var/lib/oxidized/.config/oxidized/configs
+        state=directory
+        recurse=yes
+        owner=oxidized
+        group=oxidized
+
+- name: Ensure correct permissions on dirs
+  file: path={{item}}
+        state=directory
+        owner=oxidized
+        group=oxidized
+  with_items:
+  - /var/lib/oxidized
+  - /var/lib/oxidized/.config
+  - /var/lib/oxidized/.config/oxidized
+  - /var/lib/oxidized/.config/oxidized/configs
+
+- name: Put oxidized config and router db
+  copy: dest=/var/lib/oxidized/.config/oxidized/{{item}}
+        src=templates/{{inventory_hostname}}/oxidized/{{item}}
+        owner=oxidized
+        group=oxidized
+  with_items:
+  - config
+  - router.db
+  notify: Restart oxidized
+
+- name: Create systemd service
+  copy:
+    src=oxidized.service
+    dest=/etc/systemd/system/oxidized.service
+  notify:
+  - Reload systemd daemons
+  - Restart oxidized
+
+- name: Enable systemd service
+  service:
+    name: oxidized
+    enabled: yes
+
+- name: Put apache config
+  copy: src=apache.conf
+        dest=/etc/apache2/conf-enabled/oxidized.conf
+  notify: Reload apache

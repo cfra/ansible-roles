@@ -1,0 +1,13 @@
+[Unit]
+Description=oxidized network config tracker
+After=network.target
+
+[Service]
+User=oxidized
+Group=oxidized
+WorkingDirectory=/var/lib/oxidized
+ExecStart=/usr/local/bin/oxidized
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
