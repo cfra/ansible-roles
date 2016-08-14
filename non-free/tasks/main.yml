@@ -1,0 +1,7 @@
+---
+
+- name: Make sure non-free repos are present
+  replace:
+    dest=/etc/apt/sources.list
+    regexp="^(.*debian.org/.*main)$"
+    replace="\1 contrib non-free"

@@ -1,0 +1,16 @@
+---
+
+- name: Install collectd
+  apt: name=collectd state=present update_cache=yes
+
+- name: Install mibs
+  apt: name=snmp-mibs-downloader state=present update_cache=yes
+
+- name: Put collectd config
+  template:
+    dest=/etc/collectd/collectd.conf
+    src=templates/{{inventory_hostname}}/collectd.conf.j2
+  notify: Restart collectd
+
+- name: Ensure collectd runs
+  service: name=collectd state=started enabled=yes
