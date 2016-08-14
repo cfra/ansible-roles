@@ -1,0 +1,23 @@
+---
+
+- name: Add unifi repository
+  apt_repository: repo='deb http://www.ubnt.com/downloads/unifi/debian unifi5 ubiquiti' state=present
+
+- name: Add unifi key
+  apt_key: data="{{lookup('file','unifi.gpg')}}" state=present
+
+- name: Install unifi
+  apt: name=unifi state=present update_cache=yes
+
+- name: Install haveged
+  apt: name=haveged state=present update_cache=yes
+
+- name: Download unifi beta
+  get_url:
+    url='https://www.ubnt.com/downloads/unifi/5.2.2-6505992c/unifi_sysvinit_all.deb'
+    checksum='sha1:4769DDFFC9D52D82E289433199E670A1FDEF0262'
+    dest=/opt/unifi.deb
+
+# Installation currently fails :/
+#- name: Install unifi beta
+#  apt: deb=/opt/unifi.deb
