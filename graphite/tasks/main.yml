@@ -1,0 +1,40 @@
+---
+
+- name: Install graphite
+  apt: name={{item}} state=present update_cache=yes
+  with_items:
+  - graphite-carbon
+  - graphite-web
+  - libapache2-mod-wsgi
+
+- name: Create graphite database
+  command: graphite-manage syncdb --noinput
+  args:
+    creates: /var/lib/graphite/graphite.db
+
+- name: Ensure correct permissions on database
+  file: path=/var/lib/graphite/graphite.db
+        owner=_graphite
+        group=_graphite
+
+- name: Enable graphite website
+  copy: dest=/etc/apache2/sites-enabled/graphite-web.conf
+        src=graphite-web.conf
+  notify:
+  - Reload apache
+
+- name: Put storage-schemas
+  copy: dest=/etc/carbon/storage-schemas.conf
+        src=storage-schemas.conf
+
+- name: Listen on IPv6
+  lineinfile: dest=/etc/carbon/carbon.conf
+              line="LINE_RECEIVER_INTERFACE = ::"
+              insertbefore="LINE_RECEIVER_PORT = 2003"
+  notify: Restart carbon cache
+
+- name: Use correct timezone
+  lineinfile: dest=/etc/graphite/local_settings.py
+              line="TIME_ZONE = 'Europe/Berlin'"
+              insertafter="#TIME_ZONE = 'America/Los_Angeles'"
+  notify: Restart apache
