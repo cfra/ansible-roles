@@ -1,0 +1,5 @@
+---
+dependencies:
+  - role: non-free
+  - role: apache
+  - role: postgresql

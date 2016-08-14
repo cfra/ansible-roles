@@ -1,0 +1,25 @@
+---
+- name: Install custom monitoring plugin dependencies
+  apt: name={{item}} state=present update_cache=yes
+  with_items:
+  - python-pysnmp4
+  - python-yaml
+  - libnet-snmp-perl
+
+- name: Install custom monitoring plugins
+  copy: dest=/usr/lib/nagios/plugins/{{item}}
+        src=nagios-plugins/{{item}}
+        mode=0755
+  with_items:
+  - check_env
+  - check_graphite
+  - check_ifoperstatus
+  - check_nanostation_signal
+  - check_oxidized
+
+- name: Install custom icinga scripts
+  copy: dest=/etc/icinga2/scripts/{{item}}
+        src=nagios-scripts/{{item}}
+        mode=0755
+  with_items:
+  - page-service-notification.py

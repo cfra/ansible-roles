@@ -1,0 +1,91 @@
+#!/usr/bin/python
+
+import contextlib
+import yaml
+import traceback
+import urllib2
+import sys
+import math
+
+def dewpoint(celsius, humidity):
+	a = 373.15/(273.15 + celsius)
+	s = -7.90298 * (a-1)
+	s += 5.02808 * math.log10(a)
+	s += -1.3816e-7 * (pow(10, (11.344*(1.0-1.0/a)))-1.0)
+	s += 8.1328e-3 * (pow(10, (-3.49149*(a-1)))-1)
+	s += math.log10(1013.246)
+	vp = pow(10, s - 3) * humidity
+	t = math.log(vp / 0.61078)
+	return (241.88 * t) / (17.558 - t)
+
+def run_check(host, twarn, tcrit, dtwarn, dtcrit):
+	with contextlib.closing(urllib2.urlopen('http://%s' % host)) as data:
+		info = yaml.safe_load(data)
+	temp = info['temperature']
+	humid = info['humidity']
+	dewp = dewpoint(temp, humid)
+
+	perfdata = 'temperature=%.2f humidity=%.1f dewpoint=%.1f' % (temp, humid, dewp)
+	level = 0 # Okay
+	reason = 'ENV OK: T = %.2f C, Tdew = %.1f C' % (temp, dewp)
+
+	if twarn is not None and temp >= twarn:
+		level = 1
+		reason = 'ENV TEMPERATURE WARNING: T = %.2f C' % (temp)
+	if tcrit is not None and temp >= tcrit:
+		level = 2
+		reason = 'ENV TEMPERATURE CRITICAL: T = %.2f C' % (temp)
+	if temp - dewp <= dtwarn and level <= 1:
+		level = 1
+		reason = 'ENV DEWPOINT WARNING: T = %.2f C, Tdew = %.1f C' % (temp, dewp)
+	if temp - dewp <= dtcrit:
+		level = 2
+		reason = 'ENV DEWPOINT CRITICAL: T = %.2f C, Tdew = %.1f C' % (temp, dewp)
+
+	print '%s|%s' % (reason, perfdata)
+	return level
+
+if __name__ == '__main__':
+	def param(arg, index):
+		if index >= len(sys.argv):
+			print 'Usage: %s option takes an argument'
+			sys.exit(3)
+		return sys.argv[index]
+		
+	twarn = None
+	tcrit = None
+	dtwarn = None
+	dtcrit = None
+	host = None
+
+	index = 1
+	while index < len(sys.argv):
+		if sys.argv[index] == '-H':
+			index += 1
+			host = param('-H', index)
+		elif sys.argv[index] == '-w':
+			index += 1
+			twarn = float(param('-w', index))
+		elif sys.argv[index] == '-c':
+			index += 1
+			tcrit = float(param('-c', index))
+		elif sys.argv[index] == '-dw':
+			index += 1
+			dtwarn = float(param('-dw', index))
+		elif sys.argv[index] == '-dc':
+			index += 1
+			dtcrit = float(param('-dc', index))
+		elif sys.argv[index] == '-h':
+			print 'Usage: %s -H <host> [-w <twarn>] [-c <tcrit>] [-dw <dtwarn>] [-dc <dtcrit>]' % sys.argv[0]
+			sys.exit(3)
+		index += 1
+
+	if host is None:
+		print 'Usage: Hostname unspecified'
+		sys.exit(3)
+
+	try:
+		sys.exit(run_check(host, twarn, tcrit, dtwarn, dtcrit))
+	except Exception:
+		print 'Unknown: %s' % traceback.format_exception(*sys.exc_info())[-1]
+		sys.exit(3)

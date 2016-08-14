@@ -1,0 +1,36 @@
+#!/usr/bin/env python2
+
+import contextlib
+import urllib2
+import json
+import sys
+import yaml
+
+def get_node_info(oxidized, node):
+    with contextlib.closing(urllib2.urlopen(oxidized + 'node/show/' + node + '?format=json')) as r:
+        data = r.read()
+    return data
+
+def get_last_status(oxidized, node):
+    try:
+        info = json.loads(get_node_info(oxidized, node))
+    except Exception as e:
+        return e
+    return info[u'last'][u'status']
+
+def check_node(oxidized, node):
+    status = get_last_status(oxidized, node)
+    if status == u'success':
+        return 0, 'OK: Node %s config fetch was successful' % node
+    else:
+        return 2, 'CRITICAL: Node %s config fetch failed: %s' % (node, status)
+
+if __name__ == '__main__':
+    if len(sys.argv) != 3:
+        print '%s <oxidized> <node>'
+        sys.exit(0)
+    oxidized_url = 'http://' + sys.argv[1] + '/oxidized/'
+    node = sys.argv[2]
+    ec, msg = check_node(oxidized_url, node)
+    print msg
+    sys.exit(ec)

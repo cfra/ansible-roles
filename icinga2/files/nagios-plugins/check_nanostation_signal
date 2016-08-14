@@ -1,0 +1,144 @@
+#!/usr/bin/python -W ignore::DeprecationWarning
+
+import traceback
+from pysnmp.entity.rfc3413.oneliner import cmdgen
+import pyasn1.type.univ
+
+class OIDUnsetError(RuntimeError):
+	pass
+
+class NanoStation(object):
+	def __init__(self, host, community, port=161):
+		self.host = host
+		self.community = community
+		self.port = port
+
+	def get_ifindex(self, interface):
+		interfaces = {}
+		oid = (1,3,6,1,2,1,2,2,1,2)
+		while True:
+			errorIndication, errorStatus, errorIndex, varBinds = cmdgen.CommandGenerator().nextCmd(
+				cmdgen.CommunityData('???', self.community, 0),
+				cmdgen.UdpTransportTarget((self.host, self.port)),
+				oid
+			)
+			if errorIndication is not None:
+				raise RuntimeError(errorIndication)
+
+			for binding in varBinds:
+				oid, ifname = binding[0]
+				interfaces[ifname] = oid
+		
+			if not varBinds:
+				break
+			oid = varBinds[-1][0][0]
+		return interfaces[interface][-1]
+
+	def get_oid(self, oid):
+		errorIndication, errorStatus, errorIndex, varBinds = cmdgen.CommandGenerator().getCmd(
+			cmdgen.CommunityData('???', self.community, 0),
+			cmdgen.UdpTransportTarget((self.host, self.port)),
+			oid
+		)
+		if errorIndication is not None:
+			raise RuntimeError(errorIndication)
+
+		rv = varBinds[0][1]
+		if isinstance(rv, pyasn1.type.univ.Null):
+			raise OIDUnsetError('OID %s not set' % str(oid))
+		return rv
+
+	def get_ap_strength(self, interface='ath0'):
+		try:
+			return self.get_oid((1,3,6,1,4,1,14988,1,1,1,1,1,4,self.get_ifindex(interface)))
+		except OIDUnsetError:
+			return self.get_oid((1,3,6,1,4,1,41112,1,4,5,1,5,1))
+
+	def get_station_strength(self, mac, interface='ath0'):
+		mac_out = ''
+		for char in mac:
+			if char in '0123456789abcdefABCDEF':
+				mac_out += char
+		mac = []
+		while mac_out:
+			mac.append(int(mac_out[:2], 16))
+			mac_out = mac_out[2:]
+		
+		return self.get_oid(tuple([1,3,6,1,4,1,14988,1,1,1,2,1,3] + mac + [self.get_ifindex(interface)]))
+
+if __name__ == '__main__':
+	import sys
+
+	host = None
+	community = 'public'
+	interface = 'ath0'
+	mac = None
+	warning = None
+	critical = None
+
+	index = 1
+	while index < len(sys.argv):
+		if sys.argv[index] == '-H':
+			index += 1
+			if index >= len(sys.argv):
+				print 'Usage: -H option takes an argument'
+				sys.exit(3)
+			host = sys.argv[index]
+		elif sys.argv[index] == '-C':
+			index += 1
+			if index >= len(sys.argv):
+				print 'Usage: -C option takes an argument'
+				sys.exit(3)
+			community = sys.argv[index]
+		elif sys.argv[index] == '-m':
+			index += 1
+			if index >= len(sys.argv):
+				print 'Usage: -m option takes an argument'
+				sys.exit(3)
+			mac = sys.argv[index]
+		elif sys.argv[index] == '-i':
+			index += 1
+			if index >= len(sys.argv):
+				print 'Usage: -i option takes an argument'
+				sys.exit(3)
+			interface = sys.argv[index]
+		elif sys.argv[index] == '-w':
+			index += 1
+			if index >= len(sys.argv):
+				print 'Usage: -w option takes an argument'
+				sys.exit(3)
+			warning = float(sys.argv[index])
+		elif sys.argv[index] == '-c':
+			index += 1
+			if index >= len(sys.argv):
+				print 'Usage: -c option takes an argument'
+				sys.exit(3)
+			critical = float(sys.argv[index])
+		elif sys.argv[index] == '-h':
+			print 'Usage: %s -H <host> [-C <community>] [-m <station-mac>] [-i <interface>] [-w <warning>] [-c <critical>]' % sys.argv[0]
+			sys.exit(3)
+		index += 1
+	if host is None:
+		print 'Usage: Hostname unspecified'
+		sys.exit(3)
+
+	try:
+		ns = NanoStation(host, community)
+		if mac is None:
+			rv = ns.get_ap_strength(interface)
+		else:
+			rv = ns.get_station_strength(mac, interface)
+	except Exception:
+		print 'Unknown: %s' % traceback.format_exception(*sys.exc_info())[-1]
+		sys.exit(3)
+
+	perfdata = '|dbm=%s' % str(rv)
+
+	if critical is not None and rv < critical:
+		print 'SIGNAL CRITICAL: %s dBm%s' % (str(rv),perfdata)
+		sys.exit(2)
+	if warning is not None and rv < warning:
+		print 'SIGNAL WARNING: %s dBm%s' % (str(rv),perfdata)
+		sys.exit(1)
+	print 'SIGNAL OK: %s dBm%s' % (str(rv),perfdata)
+	sys.exit(0)

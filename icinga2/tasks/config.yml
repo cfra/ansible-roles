@@ -1,0 +1,25 @@
+---
+
+- name: Disable host renotifications
+  lineinfile: dest=/etc/icinga2/conf.d/templates.conf
+              insertafter="template Notification \"mail-host-notification\" {"
+              line="  interval = 0" # No host renotification - must not match line below
+  notify: Reload icinga2
+
+- name: Disable service renotifications
+  lineinfile: dest=/etc/icinga2/conf.d/templates.conf
+              insertafter="template Notification \"mail-service-notification\" {"
+              line="  interval =   0" # Space matters here, must not match line above
+  notify: Reload icinga2
+
+- name: Put static config files
+  copy: src={{item}}
+        dest=/etc/icinga2/conf.d/{{item}}
+  notify: Reload icinga2
+  with_items:
+  - boilerplate-ansible.conf
+
+- name: Put host specific config file
+  copy: src=templates/{{inventory_hostname}}/icinga2.conf.j2
+        dest=/etc/icinga2/conf.d/config-ansible.conf
+  notify: Reload icinga2

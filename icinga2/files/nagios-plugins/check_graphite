@@ -1,0 +1,130 @@
+#!/usr/bin/env python2
+
+import contextlib
+import json
+import sys
+import traceback
+import urllib
+import urllib2
+
+def get_data(graphite, target):
+    args = urllib.urlencode({
+        'from': '-5minutes',
+        'target': target,
+        'format': 'json'
+    })
+    url = 'http://%s/render/?%s' % (graphite, args)
+    with contextlib.closing(urllib2.urlopen(url)) as req:
+        doc = json.load(req)
+    for info in doc:
+        if 'target' not in info or info['target'] != target:
+            continue
+        if 'datapoints' not in info:
+            continue
+        for datapoint in reversed(info['datapoints']):
+            if datapoint[0] is None:
+                continue
+            return datapoint[0]
+    raise RuntimeError("No recent data available for %s" % target)
+
+def human(number):
+    sign = -1 if number < 0 else 1
+    number = number * sign
+
+    prefixes = [
+        ['y', 1e-24],
+        ['z', 1e-21],
+        ['a', 1e-18],
+        ['f', 1e-15],
+        ['p', 1e-12],
+        ['n', 1e-9],
+        ['u', 1e-6],
+        ['m', 1e-3],
+        ['', 1],
+        ['k', 1e3],
+        ['M', 1e6],
+        ['G', 1e9],
+        ['T', 1e12],
+        ['P', 1e15],
+        ['E', 1e18],
+        ['Z', 1e21],
+        ['Y', 1e24],
+    ]
+
+    suffix = ''
+    for p in reversed(prefixes):
+        if number >= p[1]:
+            number /= p[1]
+            suffix = p[0]
+            break
+    number = number * sign
+    return '%.3g%s' % (number, suffix)
+
+def run_check(graphite, target, warn, crit):
+    try:
+        data = get_data(graphite, target)
+    except Exception:
+        sys.stdout.write('Unknown: %s' % traceback.format_exception(*sys.exc_info())[-1])
+        sys.exit(3)
+
+    if warn < crit:
+        if data < warn:
+            rc = 0
+        elif data < crit:
+            rc = 1
+        else:
+            rc = 2
+    else:
+        if data > warn:
+            rc = 0
+        elif data > crit:
+            rc = 1
+        else:
+            rc = 2
+
+    state_map = {
+        0: 'OK',
+        1: 'WARNING',
+        2: 'CRITICAL'
+    }
+
+    state = state_map[rc]
+    print '%s: %s is %s' % (state, target, human(data))
+    sys.exit(rc)
+
+if __name__ == '__main__':
+    def param(arg, index):
+        if index >= len(sys.argv):
+            print 'Usage: %s option takes an argument'
+            sys.exit(3)
+        return sys.argv[index]
+
+    graphite = None
+    target = None
+    warn = None
+    crit = None
+
+    index = 1
+    while index < len(sys.argv):
+        if sys.argv[index] == '-H':
+            index += 1
+            graphite = param('-H', index)
+        elif sys.argv[index] == '-t':
+            index += 1
+            target = param('-t', index)
+        elif sys.argv[index] == '-w':
+            index += 1
+            warn = float(param('-w', index))
+        elif sys.argv[index] == '-c':
+            index += 1
+            crit = float(param('-c', index))
+        else:
+            print 'Usage: %s -H <host> -t <target> -w <warn> -c <crit>' % sys.argv[0]
+            sys.exit(3)
+        index += 1
+
+    if graphite is None or target is None or warn is None or crit is None:
+        print 'Mandatory argument missing'
+        sys.exit(3)
+
+    run_check(graphite, target, warn, crit)

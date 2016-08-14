@@ -1,0 +1,11 @@
+/**
+ * ANSIBLE MANAGED
+ */
+
+library "perfdata"
+
+object GraphiteWriter "graphite" {
+  host = "{{ graphite_mgmt_ip }}"
+  port = 2003
+  enable_send_metadata = true
+}
