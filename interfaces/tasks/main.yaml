@@ -1,0 +1,11 @@
+---
+- name: Put /etc/network/interfaces
+  template:
+    dest=/etc/network/interfaces
+    src=templates/{{inventory_hostname}}/interfaces.j2
+  register: network_interfaces
+
+- name: Notify about network/interfaces change
+  shell: /bin/false
+  when: network_interfaces.changed
+  ignore_errors: yes
