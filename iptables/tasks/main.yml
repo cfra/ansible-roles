@@ -1,0 +1,18 @@
+---
+
+- name: Install iptables persistent
+  apt: name=iptables-persistent state=present update_cache=yes
+
+- name: Put iptables rules for v4
+  template:
+     dest=/etc/iptables/rules.v4
+     src=templates/{{inventory_hostname}}/iptables/ipv4.j2
+  notify:
+  - Restore iptables v4
+
+- name: Put iptables rules for v6
+  template:
+    dest=/etc/iptables/rules.v6
+    src=templates/{{inventory_hostname}}/iptables/ipv6.j2
+  notify:
+  - Restore iptables v6
