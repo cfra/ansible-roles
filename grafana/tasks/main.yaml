@@ -1,0 +1,20 @@
+---
+
+- name: Add https transport for apt
+  apt: name=apt-transport-https state=present update_cache=yes
+
+- name: Add grafana repository
+  apt_repository:
+    repo='deb https://packagecloud.io/grafana/stable/debian/ wheezy main'
+    state=present
+
+- name: Add grafana key
+  apt_key: data="{{lookup('file','grafana.key')}}" state=present
+
+- name: Install grafana
+  apt: name=grafana state=present update_cache=yes
+
+- name: Ensure grafana gets run
+  service: name=grafana-server
+           state=started
+           enabled=yes
