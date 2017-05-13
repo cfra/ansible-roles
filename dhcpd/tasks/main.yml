@@ -1,0 +1,15 @@
+---
+- name: Install dhcp server
+  apt: name=isc-dhcp-server state=present update_cache=yes
+
+- name: Put dhcp config
+  template:
+    dest=/etc/dhcp/dhcpd.conf
+    src=templates/{{inventory_hostname}}/dhcpd.conf.j2
+  notify: Restart dhcpd
+
+- name: Start dhcpd
+  service:
+    name: isc-dhcp-server
+    enabled: yes
+    state: started
