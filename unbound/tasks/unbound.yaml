@@ -1,0 +1,27 @@
+---
+- name: Install unbound
+  apt: name=unbound state=present update_cache=yes
+
+- name: Create unbound remote-control keys
+  command: unbound-control-setup
+           creates=/etc/unbound/unbound_server.key
+
+- name: Change unbound remote-control key owner
+  file: path=/etc/unbound/{{item}}
+        group=unbound
+        mode=0640
+  with_items:
+  - unbound_server.key
+  - unbound_server.pem
+  - unbound_control.key
+  - unbound_control.pem
+
+- name: Put unbound config
+  template: dest=/etc/unbound/unbound.conf
+            src=templates/{{inventory_hostname}}/unbound.conf.j2
+  notify: Reload unbound
+
+- name: Ensure unbound gets run
+  service: name=unbound
+           state=started
+           enabled=yes
