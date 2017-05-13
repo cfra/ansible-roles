@@ -1,0 +1,6 @@
+---
+- name: Put /etc/rc.local
+  template:
+          dest=/etc/rc.local
+          mode=0755
+          src=templates/{{inventory_hostname}}/rc.local.j2
