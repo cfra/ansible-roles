@@ -1,0 +1,3 @@
+---
+- name: Restart shellinabox
+  service: name=shellinabox state=restarted

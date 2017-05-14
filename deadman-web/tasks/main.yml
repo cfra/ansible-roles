@@ -1,0 +1,26 @@
+---
+- name: Install shellinabox
+  apt: name={{ item }} state=present update_cache=yes
+  with_items:
+    - shellinabox
+
+- name: Put dark css
+  copy: src=dark.css
+        dest=/etc/shellinabox/dark.css
+
+- name: Configure it to run deadman
+  lineinfile: dest=/etc/default/shellinabox
+              regexp=SHELLINABOX_ARGS=
+              line="SHELLINABOX_ARGS=\"--no-beep --css=/etc/shellinabox/dark.css -t --localhost-only -s /:deadman:deadman:/home/deadman/deadman:'./deadman deadman.conf'\""
+  notify: Restart shellinabox
+
+- name: Create deadman group
+  group: name=deadman
+
+- name: Create deadman user
+  user: name=deadman group=deadman home=/home/deadman
+
+- include: as_deadman.yml
+  become: yes
+  become_method: su
+  become_user: deadman

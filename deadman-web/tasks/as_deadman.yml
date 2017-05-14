@@ -1,0 +1,12 @@
+---
+- name: Clone deadman code
+  git:
+    dest=/home/deadman/deadman
+    repo="https://github.com/cfra/deadman.git"
+    accept_hostkey=yes
+    update=no
+
+- name: Put deadman config
+  template:
+    dest=/home/deadman/deadman/deadman.conf
+    src=templates/{{inventory_hostname}}/deadman.conf.j2
