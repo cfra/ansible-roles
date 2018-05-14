@@ -1,10 +1,20 @@
 ---
-- name: Add debmon repo
+- name: Remove old debmon repo
   apt_repository: repo='deb http://debmon.org/debmon debmon-jessie main'
+                  state=absent
+
+- name: Remove old debmon key
+  apt_key: data="{{lookup('file','debmon.gpg')}}" state=present
+
+- name: Add https transport for apt
+  apt: name=apt-transport-https state=present update_cache=yes
+
+- name: Add icinga repo
+  apt_repository: repo='deb https://packages.icinga.com/debian icinga-jessie main'
                   state=present
 
-- name: Add debmon key
-  apt_key: data="{{lookup('file','debmon.gpg')}}" state=present
+- name: Add icinga key
+  apt_key: data="{{lookup('file','icinga.gpg')}}" state=present
 
 - name: Install icinga2
   apt: name={{item}} state=present update_cache=yes
