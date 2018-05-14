@@ -4,6 +4,7 @@
     dest=/etc/network/interfaces
     src=templates/{{inventory_hostname}}/interfaces.j2
   register: network_interfaces
+  ignore_errors: yes
 
 - name: Notify about network/interfaces change
   shell: /bin/false
